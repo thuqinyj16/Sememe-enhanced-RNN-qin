@@ -1,5 +1,5 @@
 # Sememe-enhanced Recurrent Neural Networks
-This is the implementation of "sememe-enhanced neural networks", if you have any questions, feel free to contact me: qinyj16@mails.tsinghua.edu.cn :)
+This is the implementation of "sememe-enhanced neural networks", if you have any questions, feel free to contact me: qinyj16@mails.tsinghua.edu.cn
 
 ## Sentence encoders (test on SNLI)
 
