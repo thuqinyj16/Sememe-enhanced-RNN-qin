@@ -118,7 +118,6 @@ config_nli_model = {
     'fc_dim'         :  params.fc_dim         ,
     'bsize'          :  params.batch_size     ,
     'n_classes'      :  params.n_classes      ,
-    'pool_type'      :  params.pool_type      ,
     'nonlinear_fc'   :  params.nonlinear_fc   ,
     'encoder_type'   :  params.encoder_type   ,
     'use_cuda'       :  True                  ,
@@ -127,9 +126,10 @@ config_nli_model = {
 }
 
 # model
-encoder_types = ['InferSent', 'BLSTMprojEncoder', 'BGRUlastEncoder',
-                 'InnerAttentionMILAEncoder', 'InnerAttentionYANGEncoder',
-                 'InnerAttentionNAACLEncoder', 'ConvNetEncoder', 'LSTMEncoder', 'LSTM_sememe']
+encoder_types = ['LSTM_baseline', 'LSTM_concat', 'LSTM_gate', 'LSTM_cell', 'LSTM_extra_void', 'LSTM_extra_concat', 'LSTM_extra_gate', 'LSTM_extra_cell',\
+                 'BILSTM_baseline', 'BILSTM_concat', 'BILSTM_gate', 'BILSTM_cell', 'BILSTM_extra_void', 'BILSTM_extra_concat', 'BILSTM_extra_gate', 'BILSTM_extra_cell', \
+                 'GRU_baseline', 'GRU_concat', 'GRU_gate', 'GRU_cell', 'GRU_extra_void', 'GRU_extra_concat', 'GRU_extra_gate', 'GRU_extra_cell', \
+                 'BIGRU_baseline', 'BIGRU_concat', 'BIGRU_gate', 'BIGRU_cell', 'BIGRU_extra_void', 'BIGRU_extra_concat', 'BIGRU_extra_gate', 'BIGRU_extra_cell']
 assert params.encoder_type in encoder_types, "encoder_type must be in " + \
                                              str(encoder_types)
 nli_net = NLINet(config_nli_model)
