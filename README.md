@@ -1,7 +1,7 @@
 # Sememe-enhanced Recurrent Neural Networks
 This is the implementation of "sememe-enhanced neural networks", if you have any questions, feel free to contact me: qinyj16@mails.tsinghua.edu.cn
 
-## Sentence encoders ()
+## Sentence encoders (pretrained on SNLI, transfered to downstream tasks)
 
 First please download the pretrained glove embeddings, which can be achieved through: https://nlp.stanford.edu/projects/glove/ 
 
