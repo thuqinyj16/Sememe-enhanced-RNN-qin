@@ -1,26 +1,36 @@
 # Sememe-enhanced Recurrent Neural Networks
-This is the implementation of "sememe-enhanced neural networks", if you have any questions, feel free to contact me: qinyj16@mails.tsinghua.edu.cn
+This is the implementation of "sememe-enhanced neural networks", if you have any questions, feel free to contact us: qinyj16@mails.tsinghua.edu.cn, scouyang4354@gmail.com
+
+## Sememe Dataset
+sememe.txt include all 2186 sememe. hownet_en.txt is an English version HowNet while each line of word is followed by a line of all its sememes. More Details about HowNet could be found in paper.
 
 ## Sentence encoders (pretrained on SNLI, transfered to downstream tasks)
 
 First please download the pretrained glove embeddings, which can be achieved through: https://nlp.stanford.edu/projects/glove/ 
 
-Then you could easily run the by:
+Then you could easily train on SNLI Dataset by:
 
 ```
-python3 train_nli.py --word_emb_path ../glove/glove.840B.300d.txt --encoder_type LSTM_sememe --gpu_id 2
+python3 train_nli.py --word_emb_path ../glove/glove.840B.300d.txt --encoder_type LSTM_extra_cell --gpu_id 2
 ```
 
-All the models are in the FILE:models, you can replace data.py & models.py to experiment on another model, notice that you may have to change the --encoder_type & --word_emb_path hyper-parameters.
+All the models mentioned in paper are included in models.py. Check the name of the encoder and notice that you have to change the parameter --encoder_type.
 
 
+You could also test the result on other transfer task by:
+
+```
+python3 transfer.py --encoder_type LSTM_extra_cell 
+```
+model path(pkl file) should have been modified before you run.
 ## Language model
 For language model, you could run by:
 
 ```
+cd LM
 python main.py --cuda --emsize 1500 --nhid 1500 --dropout 0.65 --epochs 40 --sememe_dim 1500
 ```
-The default code is for lstm_sememe_tree, if you want to test other models, you could replace the model.py with corresponding files.
+The default code is for LSTM+cell, if you want to test other models, you could replace the model.py with corresponding files.
 
 
-Notice that our sentence encoders are trained on RTX2080, our language models are trained on GTX1080.
+Notice that our sentence encoders are trained on RTX2080Ti, our language models are trained on GTX1080Ti.
