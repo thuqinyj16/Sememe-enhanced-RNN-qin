@@ -21,3 +21,6 @@ For language model, you could run by:
 python main.py --cuda --emsize 1500 --nhid 1500 --dropout 0.65 --epochs 40 --sememe_dim 1500
 ```
 The default code is for lstm_sememe_tree, if you want to test other models, you could replace the model.py with corresponding files.
+
+
+Notice that our sentence encoders are trained on RTX2080, our language models are trained on GTX1080.
