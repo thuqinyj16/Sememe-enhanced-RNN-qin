@@ -23,14 +23,16 @@ You could also test the result on other transfer task by:
 python3 transfer.py --encoder_type LSTM_extra_cell 
 ```
 model path(pkl file) should have been modified before you run.
+
 ## Language model
+
 For language model, you could run by:
 
 ```
 cd LM
-python main.py --cuda --emsize 1500 --nhid 1500 --dropout 0.65 --epochs 40 --sememe_dim 1500
+ CUDA_VISIBLE_DEVICES=3 python main.py --cuda --emsize 1500 --nhid 1500  --epochs 40 --sememe_dim 1500 --model_type LSTM_cell --dropout 0.7
 ```
-The default code is for LSTM+cell, if you want to test other models, you could replace the model.py with corresponding files.
+The default command is for LSTM+cell, if you want to test other models, you could replace corresponding command.
 
 
 Notice that our sentence encoders are trained on RTX2080Ti, our language models are trained on GTX1080Ti.
