@@ -17,6 +17,7 @@ parser.add_argument('--data', type=str, default='./data/ptb',
                     help='location of the data corpus')
 parser.add_argument('--model', type=str, default='LSTM',
                     help='type of recurrent net (RNN_TANH, RNN_RELU, LSTM, GRU)')
+parser.add_argument('--model_type', type=str, default='LSTM_gate')
 parser.add_argument('--emsize', type=int, default=200,
                     help='size of word embeddings')
 parser.add_argument('--nhid', type=int, default=200,
@@ -49,7 +50,20 @@ parser.add_argument('--save', type=str, default='model.pt',
                     help='path to save the final model')
 parser.add_argument('--onnx-export', type=str, default='',
                     help='path to export the final model in onnx format')
+parser.add_argument('--lr_decay', type=float, default=4,
+                    help='learning rate decay')
 args = parser.parse_args()
+print(args)
+# Set the random seed manually for reproducibility.
+torch.manual_seed(args.seed)
+if torch.cuda.is_available():
+    if not args.cuda:
+        print("WARNING: You have a CUDA device, so you should probably run with --cuda")
+if 'ptb' in args.data:
+    args.save = 'ptb_' + str(args.sememe_dim) + '_' + args.model_type + '_' + str(args.dropout) + '_' + args.save
+else:
+    args.save = 'wiki_' + str(args.sememe_dim) + '_' + args.model_type + '_' + str(args.dropout) + '_' + args.save
+print('will save to %s'%(args.save))
 
 #sememe.txt是共有哪些英文sememe
 sememe_dir = 'data/sememe.txt'
@@ -60,21 +74,13 @@ lemma_dir =  'data/lemmatization.txt'
 # sememe是模仿vocab模块写的
 sememe = Sememe(hownet_dir = hownet_dir, sememe_dir = sememe_dir, lemma_dir = lemma_dir, filename = hownet_dir, lower = True)
 device = torch.device("cuda" if args.cuda else "cpu")
-emb_s_file = os.path.join(args.data, 'snli_embed_sememe.pth')
+emb_s_file = os.path.join(args.data, 'snli_embed_sememe_' + str(args.sememe_dim) + '_' + str(args.dropout) + '.pth')
 if os.path.isfile(emb_s_file):
     emb_s = torch.load(emb_s_file)
 else:
     emb_s = torch.zeros(sememe.size(), args.sememe_dim, dtype=torch.float, device=device)
     emb_s.normal_(0, 0.05)
     torch.save(emb_s, emb_s_file)
-
-print(args)
-# Set the random seed manually for reproducibility.
-torch.manual_seed(args.seed)
-if torch.cuda.is_available():
-    if not args.cuda:
-        print("WARNING: You have a CUDA device, so you should probably run with --cuda")
-
 
 ###############################################################################
 # Load data
@@ -134,7 +140,7 @@ test_sememes = batchify_sememe(corpus.test_sememes, eval_batch_size)
 ###############################################################################
 
 ntokens = len(corpus.dictionary)
-model = model.RNNModel(args.model, ntokens, args.emsize, args.nhid, args.nlayers, args.sememe_dim, sememe.size(), args.dropout, args.tied).to(device)
+model = model.RNNModel(args.model, ntokens, args.emsize, args.nhid, args.nlayers, args.sememe_dim, sememe.size(), args.model_type, args.dropout, args.tied).to(device)
 # plug these into embedding matrix inside model
 model.emb_sememe.weight.data.copy_(emb_s)
 criterion = nn.CrossEntropyLoss()
@@ -208,11 +214,12 @@ def train():
 
         # `clip_grad_norm` helps prevent the exploding gradient problem in RNNs / LSTMs.
         torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
-        
+
         for p in model.parameters():
             if(p.requires_grad):
-                p.data.add_(-lr, p.grad.data)
-        
+                if p.grad is not None:
+                    p.data.add_(-lr, p.grad.data)
+
         total_loss += loss.item()
         #optimizer.step()
         #optimizer.zero_grad()
@@ -260,7 +267,7 @@ try:
             best_val_loss = val_loss
         else:
             # Anneal the learning rate if no improvement has been seen in the validation dataset.
-            lr /= 4.0
+            lr /= args.lr_decay
 except KeyboardInterrupt:
     print('-' * 89)
     print('Exiting from training early')

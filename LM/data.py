@@ -21,9 +21,14 @@ class Corpus(object):
     def __init__(self, path, sememe):
         self.dictionary = Dictionary()
         self.sememe = sememe
-        self.train, self.train_sememes = self.tokenize(os.path.join(path, 'ptb.train.txt'))
-        self.valid, self.valid_sememes = self.tokenize(os.path.join(path, 'ptb.valid.txt'))
-        self.test, self.test_sememes = self.tokenize(os.path.join(path, 'ptb.test.txt'))
+        if 'wikitext' in path:
+            self.train, self.train_sememes = self.tokenize(os.path.join(path, 'train.txt'))
+            self.valid, self.valid_sememes = self.tokenize(os.path.join(path, 'valid.txt'))
+            self.test, self.test_sememes = self.tokenize(os.path.join(path, 'test.txt'))
+        else:
+            self.train, self.train_sememes = self.tokenize(os.path.join(path, 'ptb.train.txt'))
+            self.valid, self.valid_sememes = self.tokenize(os.path.join(path, 'ptb.valid.txt'))
+            self.test, self.test_sememes = self.tokenize(os.path.join(path, 'ptb.test.txt'))
 
     def tokenize(self, path):
         """Tokenizes a text file."""
