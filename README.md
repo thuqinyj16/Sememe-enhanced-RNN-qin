@@ -10,7 +10,7 @@ For language model, you could run by:
 
 ```
 cd LM
- CUDA_VISIBLE_DEVICES=3 python main.py --cuda --emsize 1500 --nhid 1500  --epochs 40 --sememe_dim 1500 --model_type LSTM_cell --dropout 0.7
+CUDA_VISIBLE_DEVICES=3 python main.py --cuda --emsize 1500 --nhid 1500  --epochs 40 --sememe_dim 1500 --model_type LSTM_cell --dropout 0.7
 ```
 The default command is for LSTM+cell, if you want to test other models, you could replace corresponding command.
 
