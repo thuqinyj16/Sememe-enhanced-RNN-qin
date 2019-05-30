@@ -1,4 +1,4 @@
-# Sememe-enhanced Recurrent Neural Networks
+# Enhancing Recurrent Neural Networks with Sememes
 This is the implementation of "Enhancing recurrent neural networks with sememes", if you have any question, feel free to contact us: qinyj16@mails.tsinghua.edu.cn, scouyang4354@gmail.com
 
 ## Sememe Dataset
