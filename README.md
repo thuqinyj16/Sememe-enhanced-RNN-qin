@@ -1,5 +1,5 @@
-# Enhancing Recurrent Neural Networks with Sememes
-This is the implementation of "Enhancing recurrent neural networks with sememes", if you have any question, feel free to contact us: qinyj16@mails.tsinghua.edu.cn, scouyang4354@gmail.com
+# The code has no name
+If you have any question, feel free to contact us: qinyj16@mails.tsinghua.edu.cn, scouyang4354@gmail.com
 
 ## Sememe Dataset
 sememe.txt include all 2186 sememe. hownet_en.txt is an English version HowNet while each line of word is followed by a line of all its sememes. More Details about HowNet could be found in paper.
