@@ -1,4 +1,4 @@
-# The code has no name
+# Enhancing Recurrent Neural Networks with Sememes
 If you have any question, feel free to contact us: qinyj16@mails.tsinghua.edu.cn, scouyang4354@gmail.com
 
 ## Sememe Dataset
