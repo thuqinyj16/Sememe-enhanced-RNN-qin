@@ -38,3 +38,4 @@ model path(pkl file) should have been modified before you run.
 Notice that all of our models on GTX1080Ti.
 
 ![Alt text](data/LM.png =80x60)
+![](./data/LM.png =100x20)
