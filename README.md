@@ -38,3 +38,8 @@ model path(pkl file) should have been modified before you run.
 Notice that all of our models on GTX1080Ti.
 
 <img src="data/LM.png" alt="drawing" width="500"/>
+
+<img src="data/SNLI.png" alt="drawing" width="500"/>
+
+<img src="data/DF.png" alt="drawing" width="500"/>
+
