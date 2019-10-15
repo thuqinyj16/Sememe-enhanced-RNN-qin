@@ -39,3 +39,4 @@ Notice that all of our models on GTX1080Ti.
 
 ![Alt text](data/LM.png =80x60)
 ![](./data/LM.png =100x20)
+<img src="data/LM.png" alt="drawing" width="200"/>
