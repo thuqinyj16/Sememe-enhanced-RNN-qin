@@ -36,8 +36,46 @@ model path(pkl file) should have been modified before you run.
 
 
 Notice that all of our models on GTX1080Ti.
-| 水果        | 价格    |  数量  |
-| --------   | -----:   | :----: |
-| 香蕉        | $1      |   5    |
-| 苹果        | $1      |   6    |
-| 草莓        | $1      |   7    |
+
+<table>
+	<tr>
+		<td align="center"><b>Process</b></td>
+		<td align="center"><b>Type</b></td>
+		<td align="center"><b>Source</b></td>
+		<td align="center"><b>Target</b></td>
+	</tr>
+	<tr>
+		<td align="center"  rowspan="3">Training</td>
+		<td align="center">Corpus</td>
+		<td align="center">Sogou-T</td>
+		<td align="center">Wikipedia</td>
+	</tr>
+	<tr>
+		<td align="center">Seed Lexicon</td>
+		<td align="center" colspan="2"> Google Translate API</td>
+	</tr>
+	<tr>
+		<td align="center">Sememe-based KB</td>
+		<td align="center">HowNet_zh</td>
+		<td align="center">-</td>
+	</tr>
+	<tr>
+		<td align="center" = rowspan="4">Testing</td>
+		<td align="center">Sememe Prediction</td>
+		<td align="center">-</td>
+		<td align="center">HowNet_en</td>
+	</tr>
+	<tr>
+		<td align="center">Bilingual Lexicon Induction</td>
+		<td align="center" colspan="2">Chinese-English Translation Lexicon 3.0 Version</td>
+	</tr>
+	<tr>
+		<td align="center"  rowspan="2"> Word Similarity Computation</td>
+		<td align="center">Wordsim-240</td>
+		<td align="center">WordSim-353</td>
+	</tr>
+	<tr>
+		<td align="center">WordSim-297</td>
+		<td align="center">SimLex-999</td>
+	</tr>
+</table>
