@@ -9,18 +9,19 @@ import os
 import numpy as np
 import torch
 
-
 def get_batch(batch, word_vec, sememe, emb_dim=300):
     # sent in batch in decreasing order of lengths (bsize, max_len, word_dim)
     lengths = np.array([len(x) for x in batch])
     max_len = np.max(lengths)
     embed = np.zeros((max_len, len(batch), emb_dim))
-    sememe_data = 1
+    sememe_data = sememe_data = np.zeros((max_len, len(batch), sememe.size()), dtype = np.uint8)
+
     for i in range(len(batch)):
         for j in range(len(batch[i])):
             embed[j, i, :] = word_vec[batch[i][j]]
-    return torch.from_numpy(embed).float(), lengths, sememe_data
-
+            for k in sememe.read_word_sememe(batch[i][j]):
+                sememe_data[j, i, k] = 1
+    return torch.from_numpy(embed).float(), lengths, torch.from_numpy(sememe_data).cuda()
 
 def get_word_dict(sentences):
     # create vocab of words

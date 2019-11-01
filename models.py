@@ -5,9 +5,74 @@ import torch
 import torch.nn as nn
 from torch.nn import init
 
+class SememeSumLstm(nn.Module):
+    def __init__(self, sememe_dim, mem_dim):
+        super(SememeSumLstm, self).__init__()
+        self.in_dim = sememe_dim
+        self.mem_dim = mem_dim
+        self.ioux = nn.Linear(self.in_dim, 3 * self.mem_dim)
+        self.reset_parameters()
+    def node_forward(self, inputs):
+        iou = self.ioux(inputs)# three Wx+b
+        i, o, u = torch.split(iou, iou.size(1) // 3, dim=1)
+        i, o, u = torch.sigmoid(i), torch.sigmoid(o), torch.tanh(u)
+
+        c = torch.mul(i, u)
+        h = torch.mul(o, torch.tanh(c))
+        return c, h
+    def forward(self, inputs):
+        max_time, batch_size, _ = inputs.size()
+        c = []
+        h = []
+        for time in range(max_time):
+            new_c, new_h = self.node_forward(inputs[time])
+            c.append(new_c)
+            h.append(new_h)
+        return torch.stack(c, 0), torch.stack(h, 0)
+
+    def reset_parameters(self):
+        layers = [self.ioux]
+        for layer in layers:
+            init.kaiming_normal_(layer.weight)
+            if layer.bias is not None:
+                init.constant_(layer.bias, val=0)
+
+class SememeSumGRU(nn.Module):
+    def __init__(self, sememe_dim, mem_dim):
+        super(SememeSumGRU, self).__init__()
+        self.in_dim = sememe_dim
+        self.mem_dim = mem_dim
+        self.ioux = nn.Linear(self.in_dim, 2 * self.mem_dim)
+        self.reset_parameters()
+    def node_forward(self, inputs):
+        iou = self.ioux(inputs)# three Wx+b
+        i, o = torch.split(iou, iou.size(1) // 2, dim=1)
+        i, o = torch.sigmoid(i), torch.tanh(o)
+
+        h = torch.mul(i,o)
+        return h
+    def forward(self, inputs):
+        max_time, batch_size, _ = inputs.size()
+        h = []
+        for time in range(max_time):
+            new_h = self.node_forward(inputs[time])
+            h.append(new_h)
+        return torch.stack(h, 0)
+
+    def reset_parameters(self):
+        layers = [self.ioux]
+        for layer in layers:
+            init.kaiming_normal_(layer.weight)
+            if layer.bias is not None:
+                init.constant_(layer.bias, val=0)
+
 class LSTM_baseline(nn.Module):
     def __init__(self, config):
         super(LSTM_baseline, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.in_dim = config['word_emb_dim']
         self.mem_dim = config['enc_lstm_dim']
 
@@ -60,6 +125,10 @@ class LSTM_baseline(nn.Module):
 class LSTM_concat(nn.Module):
     def __init__(self, config):
         super(LSTM_concat, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -120,6 +189,10 @@ class LSTM_concat(nn.Module):
 class LSTM_gate(nn.Module):
     def __init__(self, config):
         super(LSTM_gate, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -180,6 +253,10 @@ class LSTM_gate(nn.Module):
 class LSTM_cell(nn.Module):
     def __init__(self, config):
         super(LSTM_cell, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -248,6 +325,10 @@ class LSTM_cell(nn.Module):
 class LSTM_extra_void(nn.Module):
     def __init__(self, config):
         super(LSTM_extra_void, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -305,7 +386,7 @@ class LSTM_extra_void(nn.Module):
             hidden_old = torch.stack(output[0:length[i]], dim = 0)[:, i, :]
             new_output_2.append(torch.index_select(output[length[i]-1], 0, torch.tensor(i, device = 'cuda')))
             hidden = self.W(hidden_old)
-            
+
             emb_s_sum = emb_s[0:length[i], i, :]
             emb_s_sum = self.W_s(emb_s_sum)
             hidden = torch.cat([hidden, emb_s_sum], dim = 1)
@@ -318,6 +399,10 @@ class LSTM_extra_void(nn.Module):
 class LSTM_extra_concat(nn.Module):
     def __init__(self, config):
         super(LSTM_extra_concat, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -395,6 +480,10 @@ class LSTM_extra_concat(nn.Module):
 class LSTM_extra_gate(nn.Module):
     def __init__(self, config):
         super(LSTM_extra_gate, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -478,6 +567,10 @@ class LSTM_extra_gate(nn.Module):
 class LSTM_extra_cell(nn.Module):
     def __init__(self, config):
         super(LSTM_extra_cell, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -494,7 +587,7 @@ class LSTM_extra_cell(nn.Module):
         self.fs = nn.Linear(self.mem_dim, self.mem_dim)
         self.fh = nn.Linear(self.mem_dim, self.mem_dim)
         #fs是专门处理sememe传过来的c和h
-        
+
         self.W_s = nn.Linear(self.mem_dim, self.mem_dim)
         self.W = nn.Linear(self.mem_dim, self.mem_dim)
         self.query = nn.Embedding(2*self.mem_dim, 1)
@@ -545,7 +638,7 @@ class LSTM_extra_cell(nn.Module):
             hidden_old = torch.stack(output[0:length[i]], dim = 0)[:, i, :]
             new_output_2.append(torch.index_select(output[length[i]-1], 0, torch.tensor(i, device = 'cuda')))
             hidden = self.W(hidden_old)
-            
+
             emb_s_sum = sememe_h[0:length[i], i, :]
             emb_s_sum = self.W_s(emb_s_sum)
             hidden = torch.cat([hidden, emb_s_sum], dim = 1)
@@ -567,6 +660,10 @@ class LSTM_extra_cell(nn.Module):
 class BILSTM_baseline(nn.Module):
     def __init__(self, config):
         super(BILSTM_baseline, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.in_dim = config['word_emb_dim']
         self.mem_dim = config['enc_lstm_dim']
         self.pool_type = config['pool_type']
@@ -626,7 +723,7 @@ class BILSTM_baseline(nn.Module):
         c = torch.mul(i, u) + fc #sum means sigma
         h = torch.mul(o, torch.tanh(c))
         return (c, h)
-    
+
     def forward(self, sent, sent_len, sememe_data):
         sent_len_sorted, idx_sort = np.sort(sent_len)[::-1], np.argsort(-sent_len)
         sent_len_sorted = sent_len_sorted.copy()
@@ -676,6 +773,10 @@ class BILSTM_baseline(nn.Module):
 class BILSTM_concat(nn.Module):
     def __init__(self, config):
         super(BILSTM_concat, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -720,7 +821,7 @@ class BILSTM_concat(nn.Module):
     def node_backward(self, inputs, hx, sememe_h):
         child_c = hx[0]
         child_h = hx[1]
-        
+
         inputs = torch.cat([inputs, sememe_h], dim = 1)
         iou = self.ioux_b(inputs) + self.iouh_b(child_h)
         i, o, u = torch.split(iou, iou.size(1) // 3, dim=1)
@@ -732,7 +833,7 @@ class BILSTM_concat(nn.Module):
         c = torch.mul(i, u) + fc
         h = torch.mul(o, torch.tanh(c))
         return (c, h)
-    
+
     def forward(self, sent, sent_len, sememe_data):
         # hx: (child_c, child_h)
         sememe_h = self.sememe_sum(sememe_data)
@@ -793,6 +894,10 @@ class BILSTM_concat(nn.Module):
 class BILSTM_gate(nn.Module):
     def __init__(self, config):
         super(BILSTM_gate, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -855,7 +960,7 @@ class BILSTM_gate(nn.Module):
         c = torch.mul(i, c_telta) + fc #sum means sigma
         h = torch.mul(o, torch.tanh(c)) + torch.mul(o_c, torch.tanh(self.W_c_b(sememe_h)))
         return (c, h)
-    
+
     def forward(self, sent, sent_len, sememe_data):
         # hx: (child_c, child_h)
         sememe_h = self.sememe_sum(sememe_data)
@@ -916,6 +1021,10 @@ class BILSTM_gate(nn.Module):
 class BILSTM_cell(nn.Module):
     def __init__(self, config):
         super(BILSTM_cell, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -1048,6 +1157,10 @@ class BILSTM_cell(nn.Module):
 class BILSTM_extra_void(nn.Module):
     def __init__(self, config):
         super(BILSTM_extra_void, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -1165,7 +1278,7 @@ class BILSTM_extra_void(nn.Module):
         idx_unsort = torch.from_numpy(idx_unsort).cuda()
         sent_output_forward = a.index_select(1, idx_unsort)
         sent_output_backward = b.index_select(1, idx_unsort)
-        
+
         new_output_forward = []
         new_output_2_forward = []
         new_output_backward = []
@@ -1181,7 +1294,7 @@ class BILSTM_extra_void(nn.Module):
             new_output_forward.append(torch.mm(att.transpose(1,0), hidden_old_forward))
         new_output_forward = self.W_p(torch.squeeze(torch.stack(new_output_forward, dim = 0))) + self.W_x(torch.squeeze(torch.stack(new_output_2_forward, dim = 0)))
         new_output_forward = torch.tanh(new_output_forward)
-        
+
         for i in range(len(sent_len)):
             hidden_old_backward = sent_output_backward[0:sent_len[i], i, :]
             hidden = self.W_b(hidden_old_backward)
@@ -1193,13 +1306,17 @@ class BILSTM_extra_void(nn.Module):
             new_output_backward.append(torch.mm(att.transpose(1,0), hidden_old_backward))
         new_output_backward = self.W_p_b(torch.squeeze(torch.stack(new_output_backward, dim = 0))) + self.W_x_b(sent_output_backward[0])
         new_output_backward = torch.tanh(new_output_backward)
-        
+
         final_output = torch.cat([new_output_forward, new_output_backward], dim = 1)
         return final_output
 
 class BILSTM_extra_concat(nn.Module):
     def __init__(self, config):
         super(BILSTM_extra_concat, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -1227,7 +1344,7 @@ class BILSTM_extra_concat(nn.Module):
         self.W_p_b = nn.Linear(self.mem_dim, self.mem_dim)
         self.W_x_b = nn.Linear(self.mem_dim, self.mem_dim)
         self.reset_parameters()
-        
+
     def reset_parameters(self):
         layers = [self.ioux, self.ioux_b, self.iouh, self.iouh_b, self.fx, self.fx_b, self.fh, self.fh_b]
         for layer in layers:
@@ -1254,7 +1371,7 @@ class BILSTM_extra_concat(nn.Module):
     def node_backward(self, inputs, hx, sememe_h):
         child_c = hx[0]
         child_h = hx[1]
-        
+
         inputs = torch.cat([inputs, sememe_h], dim = 1)
         iou = self.ioux_b(inputs) + self.iouh_b(child_h)
         i, o, u = torch.split(iou, iou.size(1) // 3, dim=1)
@@ -1312,7 +1429,7 @@ class BILSTM_extra_concat(nn.Module):
         idx_unsort = torch.from_numpy(idx_unsort).cuda()
         sent_output_forward = a.index_select(1, idx_unsort)
         sent_output_backward = b.index_select(1, idx_unsort)
-        
+
         sememe_h = sememe_h.index_select(1, idx_unsort)
         new_output_forward = []
         new_output_2_forward = []
@@ -1357,6 +1474,10 @@ class BILSTM_extra_concat(nn.Module):
 class BILSTM_extra_gate(nn.Module):
     def __init__(self, config):
         super(BILSTM_extra_gate, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -1505,7 +1626,7 @@ class BILSTM_extra_gate(nn.Module):
         new_output_backward = torch.tanh(new_output_backward)
 
         final_output = torch.cat([new_output_forward, new_output_backward], dim = 1)
-        
+
         return final_output
 
     def sememe_sum(self, input_s):
@@ -1519,6 +1640,10 @@ class BILSTM_extra_gate(nn.Module):
 class BILSTM_extra_cell(nn.Module):
     def __init__(self, config):
         super(BILSTM_extra_cell, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -1689,6 +1814,10 @@ class BILSTM_extra_cell(nn.Module):
 class GRU_baseline(nn.Module):
     def __init__(self, config):
         super(GRU_baseline, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.in_dim = config['word_emb_dim']
         self.mem_dim = config['enc_lstm_dim']
 
@@ -1738,6 +1867,10 @@ class GRU_baseline(nn.Module):
 class GRU_concat(nn.Module):
     def __init__(self, config):
         super(GRU_concat, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -1800,6 +1933,10 @@ class GRU_concat(nn.Module):
 class GRU_gate(nn.Module):
     def __init__(self, config):
         super(GRU_gate, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -1863,6 +2000,10 @@ class GRU_gate(nn.Module):
 class GRU_cell(nn.Module):
     def __init__(self, config):
         super(GRU_cell, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -1918,12 +2059,16 @@ class GRU_cell(nn.Module):
         for i in range(input_s.size()[0]):
             input_sememe.append(torch.mm(input_s[i].float(), emb_sememe))
         input_sememe = torch.stack(input_sememe, dim = 0)
-        sememe_h = self.sememesumlstm(input_sememe)
+        sememe_h = self.sememesumGRU(input_sememe)
         return sememe_h
 
 class GRU_extra_void(nn.Module):
     def __init__(self, config):
         super(GRU_extra_void, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -1983,7 +2128,7 @@ class GRU_extra_void(nn.Module):
             hidden_old = torch.stack(output[0:length[i]], dim = 0)[:, i, :]
             new_output_2.append(torch.index_select(output[length[i]-1], 0, torch.tensor(i, device = 'cuda')))
             hidden = self.W(hidden_old)
-            
+
             emb_s_sum = sememe_h[0:length[i], i, :]
             emb_s_sum = self.W_s(emb_s_sum)
             hidden = torch.cat([hidden, emb_s_sum], dim = 1)
@@ -1996,6 +2141,10 @@ class GRU_extra_void(nn.Module):
 class GRU_extra_concat(nn.Module):
     def __init__(self, config):
         super(GRU_extra_concat, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -2055,7 +2204,7 @@ class GRU_extra_concat(nn.Module):
             hidden_old = torch.stack(output[0:length[i]], dim = 0)[:, i, :]
             new_output_2.append(torch.index_select(output[length[i]-1], 0, torch.tensor(i, device = 'cuda')))
             hidden = self.W(hidden_old)
-            
+
             emb_s_sum = sememe_h[0:length[i], i, :]
             emb_s_sum = self.W_s(emb_s_sum)
             hidden = torch.cat([hidden, emb_s_sum], dim = 1)
@@ -2064,7 +2213,7 @@ class GRU_extra_concat(nn.Module):
         new_output = self.W_p(torch.squeeze(torch.stack(new_output, dim = 0))) + self.W_x(torch.squeeze(torch.stack(new_output_2, dim = 0)))
         new_output = torch.tanh(new_output)
         return new_output
-    
+
     def sememe_sum(self, input_s):
         emb_sememe = self.emb_sememe.weight
         input_sememe = []
@@ -2076,6 +2225,10 @@ class GRU_extra_concat(nn.Module):
 class GRU_extra_gate(nn.Module):
     def __init__(self, config):
         super(GRU_extra_gate, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -2138,7 +2291,7 @@ class GRU_extra_gate(nn.Module):
             hidden_old = torch.stack(output[0:length[i]], dim = 0)[:, i, :]
             new_output_2.append(torch.index_select(output[length[i]-1], 0, torch.tensor(i, device = 'cuda')))
             hidden = self.W(hidden_old)
-            
+
             emb_s_sum = sememe_h[0:length[i], i, :]
             emb_s_sum = self.W_s(emb_s_sum)
             hidden = torch.cat([hidden, emb_s_sum], dim = 1)
@@ -2159,6 +2312,10 @@ class GRU_extra_gate(nn.Module):
 class GRU_extra_cell(nn.Module):
     def __init__(self, config):
         super(GRU_extra_cell, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -2217,7 +2374,7 @@ class GRU_extra_cell(nn.Module):
             hidden_old = torch.stack(output[0:length[i]], dim = 0)[:, i, :]
             new_output_2.append(torch.index_select(output[length[i]-1], 0, torch.tensor(i, device = 'cuda')))
             hidden = self.W(hidden_old)
-            
+
             emb_s_sum = sememe_h[0:length[i], i, :]
             emb_s_sum = self.W_s(emb_s_sum)
             hidden = torch.cat([hidden, emb_s_sum], dim = 1)
@@ -2233,12 +2390,16 @@ class GRU_extra_cell(nn.Module):
         for i in range(input_s.size()[0]):
             input_sememe.append(torch.mm(input_s[i].float(), emb_sememe))
         input_sememe = torch.stack(input_sememe, dim = 0)
-        sememe_h = self.sememesumlstm(input_sememe)
+        sememe_h = self.sememesumGRU(input_sememe)
         return sememe_h
 
 class BIGRU_baseline(nn.Module):
     def __init__(self, config):
         super(BIGRU_baseline, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.in_dim = config['word_emb_dim']
         self.mem_dim = config['enc_lstm_dim']
         self.pool_type = config['pool_type']
@@ -2343,6 +2504,10 @@ class BIGRU_baseline(nn.Module):
 class BIGRU_concat(nn.Module):
     def __init__(self, config):
         super(BIGRU_concat, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -2454,6 +2619,10 @@ class BIGRU_concat(nn.Module):
 class BIGRU_gate(nn.Module):
     def __init__(self, config):
         super(BIGRU_gate, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -2502,7 +2671,7 @@ class BIGRU_gate(nn.Module):
         iou = self.ioux(inputs) + self.iouh(child_h) + self.ious(sememe_h)
         z, r = torch.split(iou, iou.size(1) // 2, dim=1)
         z, r = torch.sigmoid(z), torch.sigmoid(r)
-        
+
         o_c = self.fx_s(inputs) + self.fh_s(child_h) + self.fs(sememe_h)
         o_c = torch.sigmoid(o_c)
         h_telta = self.fx(inputs) + self.Uh(torch.mul(r, child_h))
@@ -2524,7 +2693,7 @@ class BIGRU_gate(nn.Module):
         h = torch.mul((1-z), child_h) + torch.mul(z, h_telta) + torch.mul(o_c, torch.tanh(self.W_c_b(sememe_h)))
         return h
 
-    def forward(self, sent, sent_len, sememe_data):       
+    def forward(self, sent, sent_len, sememe_data):
         sememe_h = self.sememe_sum(sememe_data)
         sent_len_sorted, idx_sort = np.sort(sent_len)[::-1], np.argsort(-sent_len)
         sent_len_sorted = sent_len_sorted.copy()
@@ -2580,6 +2749,10 @@ class BIGRU_gate(nn.Module):
 class BIGRU_cell(nn.Module):
     def __init__(self, config):
         super(BIGRU_cell, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -2698,12 +2871,16 @@ class BIGRU_cell(nn.Module):
         for i in range(input_s.size()[0]):
             input_sememe.append(torch.mm(input_s[i].float(), emb_sememe))
         input_sememe = torch.stack(input_sememe, dim = 0)
-        sememe_h = self.sememesumlstm(input_sememe)
+        sememe_h = self.sememesumGRU(input_sememe)
         return sememe_h
 
 class BIGRU_extra_void(nn.Module):
     def __init__(self, config):
         super(BIGRU_extra_void, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -2815,7 +2992,7 @@ class BIGRU_extra_void(nn.Module):
         idx_unsort = torch.from_numpy(idx_unsort).cuda()
         sent_output_forward = a.index_select(1, idx_unsort)
         sent_output_backward = b.index_select(1, idx_unsort)
-        
+
         new_output_forward = []
         new_output_2_forward = []
         new_output_backward = []
@@ -2850,6 +3027,10 @@ class BIGRU_extra_void(nn.Module):
 class BIGRU_extra_concat(nn.Module):
     def __init__(self, config):
         super(BIGRU_extra_concat, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -3002,6 +3183,10 @@ class BIGRU_extra_concat(nn.Module):
 class BIGRU_extra_gate(nn.Module):
     def __init__(self, config):
         super(BIGRU_extra_gate, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -3060,7 +3245,7 @@ class BIGRU_extra_gate(nn.Module):
         iou = self.ioux(inputs) + self.iouh(child_h) + self.ious(sememe_h)
         z, r = torch.split(iou, iou.size(1) // 2, dim=1)
         z, r = torch.sigmoid(z), torch.sigmoid(r)
-        
+
         o_c = self.fx_s(inputs) + self.fh_s(child_h) + self.fs(sememe_h)
         o_c = torch.sigmoid(o_c)
         h_telta = self.fx(inputs) + self.Uh(torch.mul(r, child_h))
@@ -3083,7 +3268,7 @@ class BIGRU_extra_gate(nn.Module):
         return h
 
     def forward(self, sent, sent_len, sememe_data):
-        
+
         sememe_h = self.sememe_sum(sememe_data)
         sent_len_sorted, idx_sort = np.sort(sent_len)[::-1], np.argsort(-sent_len)
         sent_len_sorted = sent_len_sorted.copy()
@@ -3168,6 +3353,10 @@ class BIGRU_extra_gate(nn.Module):
 class BIGRU_extra_cell(nn.Module):
     def __init__(self, config):
         super(BIGRU_extra_cell, self).__init__()
+        self.enc_lstm_dim = config['enc_lstm_dim']
+        self.sememe_dim = config['sememe_dim']
+        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
+        self.sememesumGRU = SememeSumGRU(self.sememe_dim, self.enc_lstm_dim)
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
@@ -3317,7 +3506,7 @@ class BIGRU_extra_cell(nn.Module):
         for i in range(input_s.size()[0]):
             input_sememe.append(torch.mm(input_s[i].float(), emb_sememe))
         input_sememe = torch.stack(input_sememe, dim = 0)
-        sememe_h = self.sememesumlstm(input_sememe)
+        sememe_h = self.sememesumGRU(input_sememe)
         return sememe_h
 
 class NLINet(nn.Module):
@@ -3334,7 +3523,6 @@ class NLINet(nn.Module):
         self.sememe_dim = config['sememe_dim']
         self.sememe_size = config['sememe_size']
 
-        self.sememesumlstm = SememeSumLstm(self.sememe_dim, self.enc_lstm_dim)
         self.emb_sememe = nn.Embedding(self.sememe_size, self.sememe_dim)
         self.encoder = eval(self.encoder_type)(config)
         self.inputdim = 4*self.enc_lstm_dim
@@ -3364,4 +3552,3 @@ class NLINet(nn.Module):
         features = torch.cat((u, v, torch.abs(u-v), u*v), 1)
         output = self.classifier(features)
         return output
-

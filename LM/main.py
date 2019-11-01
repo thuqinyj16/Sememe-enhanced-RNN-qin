@@ -52,8 +52,10 @@ parser.add_argument('--onnx-export', type=str, default='',
                     help='path to export the final model in onnx format')
 parser.add_argument('--lr_decay', type=float, default=4,
                     help='learning rate decay')
+parser.add_argument("--gpu_id", type=int, default=0, help="GPU ID")
 args = parser.parse_args()
 print(args)
+torch.cuda.set_device(args.gpu_id)
 # Set the random seed manually for reproducibility.
 torch.manual_seed(args.seed)
 if torch.cuda.is_available():
