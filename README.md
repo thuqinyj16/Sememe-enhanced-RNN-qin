@@ -34,15 +34,3 @@ For adversarial attack, you could generate adversarial examples after you have t
 python3 adv_attack.py
 ```
 Then you should add these new example to the original NLI dataset and keep trainning the NLI model for more epochs. Please keep encoder type all the same.
-
-## Main results
-
-
-<img src="data/LM.png" alt="drawing" width="500"/>
-
-
-<img src="data/SNLI.png" alt="drawing" width="500"/>
-
-
-<img src="data/DF.png" alt="drawing" width="500"/>
-
