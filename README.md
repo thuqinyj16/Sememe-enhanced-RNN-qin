@@ -14,7 +14,7 @@ CUDA_VISIBLE_DEVICES=3 python main.py --cuda --emsize 1500 --nhid 1500  --epochs
 ```
 The default command is for LSTM+cell, if you want to test other models, you could replace corresponding command.
 
-## Sentence encoders (pretrained on SNLI, transfered to downstream tasks)
+## Sentence encoders
 
 First please download the pretrained glove embeddings, which can be achieved through: https://nlp.stanford.edu/projects/glove/ 
 
@@ -26,16 +26,7 @@ python3 train_nli.py --word_emb_path ../glove/glove.840B.300d.txt --encoder_type
 
 All the models mentioned in paper are included in models.py. Check the name of the encoder and notice that you have to change the parameter --encoder_type.
 
-
-You could also test the result on other transfer task by(not report in current paper):
-
-```
-python3 transfer.py --encoder_type LSTM_extra_cell 
-```
-model path(pkl file) should have been modified before you run.
-
-
-Notice that all of our models on GTX1080Ti.
+## Adversarial attack
 
 For adversarial attack, you could generate adversarial examples after you have trainning an NLI model.
 
