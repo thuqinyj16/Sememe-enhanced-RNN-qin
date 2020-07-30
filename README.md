@@ -28,7 +28,7 @@ All the models mentioned in paper are included in models.py. Check the name of t
 
 ## Adversarial attack
 
-For adversarial attack, you could generate adversarial examples after you have trainning an NLI model.
+For adversarial attack, you could generate adversarial examples after you have trainning an NLI model. \
 
 ```
 python3 adv_attack.py
